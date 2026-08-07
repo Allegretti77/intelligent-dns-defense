@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Capturas transitórias / dados brutos (não versionar)
+*.pcap
+datasets/raw/
+
+# SO
+.DS_Store

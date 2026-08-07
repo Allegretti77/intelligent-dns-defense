@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/intelligent-dns-defense/schemas/dns_event.schema.json",
+  "title": "DNS Event (normalized)",
+  "description": "Representacao canonica e agnostica de fonte de uma transacao DNS (uma consulta e, quando disponivel, sua resposta) observada por um sensor de telemetria (BIND, Zeek ou Suricata) no laboratorio Intelligent DNS Defense. Produzida pelo normalizador a partir do query log do BIND, do dns.log do Zeek e do eve.json do Suricata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "timestamp",
+    "sensor",
+    "event_type",
+    "source_ip",
+    "query",
+    "query_type",
+    "lab_scenario"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Versao DESTE schema a que o evento obedece. Permite o schema evoluir sem quebrar datasets antigos em silencio.",
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "event_id": {
+      "description": "Identificador unico atribuido pelo normalizador, nao pela fonte.",
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "description": "Instante da observacao, canonizado para UTC ISO 8601 pelo normalizador.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "sensor": {
+      "description": "Fonte de telemetria que produziu este evento.",
+      "type": "string",
+      "enum": ["bind", "zeek", "suricata"]
+    },
+    "event_type": {
+      "description": "Unidade canonica. Todas as fontes sao normalizadas ao nivel de transacao; os campos response_* sao null quando a fonte so observou a consulta (ex.: query log do BIND).",
+      "type": "string",
+      "enum": ["dns_transaction"]
+    },
+    "protocol": {
+      "description": "Transporte. UDP para consultas tipicas/amplificacao; TCP relevante para tunneling e transferencia de zona. Null quando a fonte nao expoe.",
+      "type": ["string", "null"],
+      "enum": ["UDP", "TCP", null]
+    },
+    "source_ip": {
+      "description": "Cliente / origem da consulta.",
+      "type": "string",
+      "format": "ipv4"
+    },
+    "destination_ip": {
+      "description": "Servidor / respondente. Null quando a fonte nao registra explicitamente (query log do BIND).",
+      "type": ["string", "null"],
+      "format": "ipv4"
+    },
+    "dns_id": {
+      "description": "Id da mensagem DNS (16 bits). Permite correlacionar a mesma transacao entre sensores. Null quando a fonte nao expoe (query log do BIND).",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "query": {
+      "description": "Nome consultado (qname).",
+      "type": "string"
+    },
+    "query_type": {
+      "description": "Mnemonico do tipo de consulta (A, AAAA, TXT, MX, SOA, ANY, ...).",
+      "type": "string"
+    },
+    "response_code": {
+      "description": "Mnemonico do rcode da resposta (NOERROR, NXDOMAIN, SERVFAIL, ...). Null quando esta fonte nao observou resposta.",
+      "type": ["string", "null"]
+    },
+    "answers": {
+      "description": "Registros de resposta. Lista vazia = resposta sem answer records (NODATA/NXDOMAIN). Null = nenhuma resposta observada. Necessario para fast-flux (conjunto/dispersao de IPs e TTL) e entropia do lado da resposta.",
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rdata"],
+        "properties": {
+          "rdata": { "type": "string" },
+          "rrtype": { "type": ["string", "null"] },
+          "ttl": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    },
+    "query_size": {
+      "description": "Tamanho da consulta em bytes (definido pelo normalizador). Null ate a correlacao de tamanho ser ligada. Denominador do fator de amplificacao.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "response_size": {
+      "description": "Tamanho da resposta em bytes. Null ate a correlacao de tamanho ser ligada. Numerador do fator de amplificacao.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "duration_ms": {
+      "description": "Tempo de resolucao em milissegundos (ex.: rtt do Zeek). Null quando indisponivel.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "alert_signature": {
+      "description": "Texto da assinatura do IDS, quando o evento carrega/foi correlacionado com um alerta do Suricata. Null para eventos de protocolo puros.",
+      "type": ["string", "null"]
+    },
+    "severity": {
+      "description": "Severidade de um alerta associado, se houver.",
+      "type": ["string", "null"]
+    },
+    "lab_scenario": {
+      "description": "Rotulo do experimento carimbado no momento da captura. Verdade-fundamental (ground truth) para construir datasets rotulados.",
+      "type": "string",
+      "enum": ["baseline", "dns_tunneling", "dns_amplification", "fast_flux", "unknown"]
+    }
+  }
+}

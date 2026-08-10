@@ -15,7 +15,7 @@ Ver a árvore de diretórios do repositório.
 
 ## Status
 - Fase 1 (Telemetria): concluída — BIND, Zeek e Suricata capturando na rede do lab.
-- Próximo: normalizador de eventos (as três fontes -> um schema JSON único).
+- Próximo: datasets rotulados de ataque (Fase 2 - features e scoring).
 
 
 ## Licença

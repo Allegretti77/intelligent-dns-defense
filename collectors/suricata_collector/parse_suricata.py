@@ -9,10 +9,14 @@ resposta sem answer records (NXDOMAIN/NODATA) -> answers [].
 Considera apenas event_type == 'dns'. Alertas (event_type 'alert') sao
 correlacionados em etapa posterior, nao aqui.
 """
-import argparse, json, sys
+import argparse, hashlib, json, sys
 from datetime import datetime, timezone
 
 SCHEMA_VERSION = "1.0.0"
+
+def make_event_id(sensor, timestamp, source_ip, dns_id, query, query_type):
+    key = "|".join(str(x) for x in (sensor, timestamp, source_ip, dns_id, query, query_type))
+    return f"{sensor}-{hashlib.sha256(key.encode()).hexdigest()[:12]}"
 
 def to_utc_iso(ts: str) -> str:
     dt = datetime.fromisoformat(ts).astimezone(timezone.utc)
@@ -51,10 +55,11 @@ def emit(query_evt, answer_evt, seq):
         tq = datetime.fromisoformat(query_evt["timestamp"])
         ta = datetime.fromisoformat(answer_evt["timestamp"])
         duration_ms = round((ta - tq).total_seconds() * 1000, 3)
+    ts_iso = to_utc_iso(base["timestamp"])
     return {
         "schema_version": SCHEMA_VERSION,
-        "event_id": f"suricata-{seq:08d}",
-        "timestamp": to_utc_iso(base["timestamp"]),
+        "event_id": make_event_id("suricata", ts_iso, base.get("src_ip"), dns_id, qname, qtype),
+        "timestamp": ts_iso,
         "sensor": "suricata",
         "event_type": "dns_transaction",
         "protocol": base.get("proto"),

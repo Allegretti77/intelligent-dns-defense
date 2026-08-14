@@ -6,9 +6,13 @@ arquivo, entao response_code/answers/tamanhos saem como null (o caso que o
 schema preve). Linhas de outras categorias (ex.: query-errors) nao casam com o
 padrao de 'query:' e sao reportadas como puladas, nao fatais.
 """
-import argparse, json, re, sys
+import argparse, hashlib, json, re, sys
 
 SCHEMA_VERSION = "1.0.0"
+
+def make_event_id(sensor, timestamp, source_ip, dns_id, query, query_type):
+    key = "|".join(str(x) for x in (sensor, timestamp, source_ip, dns_id, query, query_type))
+    return f"{sensor}-{hashlib.sha256(key.encode()).hexdigest()[:12]}"
 
 # 2026-08-06T17:14:05.298Z queries: info: client @0x7f.. 192.168.56.101#36474 (lab.local): query: lab.local IN A +E(0)K (192.168.56.1)
 LINE_RE = re.compile(
@@ -34,7 +38,7 @@ def parse_line(line: str, scenario: str, seq: int):
     dst_m = DST_RE.search(rest)
     return {
         "schema_version": SCHEMA_VERSION,
-        "event_id": f"bind-{seq:08d}",
+        "event_id":make_event_id("bind", m.group("ts"), m.group("src"), None, m.group("qname"), m.group("qtype")),
         "timestamp": m.group("ts"),           # ja vem UTC ISO8601 (print-time iso8601-utc)
         "sensor": "bind",
         "event_type": "dns_transaction",

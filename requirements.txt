@@ -1,2 +1,3 @@
 # Validação de schema (Passo 4 - normalizador)
 jsonschema>=4.0
+anthropic>=0.40
